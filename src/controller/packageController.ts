@@ -19,7 +19,8 @@ export function createPackage(
         destination_y,
         origin_x,
         origin_y,
-        priority
+        priority,
+        status: 'pending'
     });
 
     packageList.push(newPackage);

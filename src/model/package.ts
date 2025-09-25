@@ -1,4 +1,5 @@
 export type Priority = 'low' | 'medium' | 'high';
+export type status = 'pending' | 'in transit' | 'delivered';
 
 export interface PackageProps {
     id: number;
@@ -8,6 +9,7 @@ export interface PackageProps {
     origin_x: number;
     origin_y: number;
     priority: Priority;
+    status: status;
 }
 
 class Package {
@@ -18,6 +20,7 @@ class Package {
     origin_x: number;
     origin_y: number;
     priority: Priority;
+    status: status = 'pending';
 
     constructor({ id, weight, destination_x, destination_y, origin_x, origin_y, priority }: PackageProps) {
         this.id = id;
@@ -27,6 +30,7 @@ class Package {
         this.origin_x = origin_x;
         this.origin_y = origin_y;
         this.priority = priority;
+        this.status = 'pending';
     }
 }
 

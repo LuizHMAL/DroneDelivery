@@ -24,4 +24,6 @@ class Delivery {
         this.status = status;
     }
 }
+
+
 export default Delivery;

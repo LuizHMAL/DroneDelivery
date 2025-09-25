@@ -1,8 +1,9 @@
 import inquirer from 'inquirer';
-import { createDrone, getAllDrones } from '../controller/droneController';
-import { createPackage, getAllPackages } from '../controller/packageController';
+import { createDrone, getAllDrones, getDroneById } from '../controller/droneController';
+import { createPackage, getAllPackages, getPackageById } from '../controller/packageController';
 import { createDelivery, getAllDeliveries, runDelivery } from '../controller/deliveryController';
-
+import { createDeliveryAccurate } from '../controller/deliveryController'; // Importa a função createDeliveryAccurate
+import deliveryList from '../data/deliveryData';
 
 function seedData() {
   createDrone('1', 'Phantom A', 10, 100, 80, 'available', 0, 0, 'high priority');
@@ -26,8 +27,8 @@ async function mainMenu() {
       choices: [
         '📦 Listar Pacotes',
         '🚁 Listar Drones',
-        '📤 Criar Entrega',
-        '▶️ Iniciar e Completar Entrega', 
+        '📍 Criar Entrega Precisão',
+        '▶️ Iniciar e Completar Entrega',
         '➕ Criar Drone',
         '➕ Criar Pacote',
         '📄 Ver Entregas',
@@ -43,8 +44,8 @@ async function mainMenu() {
     case '🚁 Listar Drones':
       listDrones();
       break;
-    case '📤 Criar Entrega':
-      await handleCreateDelivery();
+    case '📍 Criar Entrega Precisão':  
+      await handleCreateDeliveryAccurate();
       break;
     case '▶️ Iniciar e Completar Entrega':
       await handleRunDelivery();
@@ -77,6 +78,7 @@ function listDrones() {
 
 function listPackages() {
   const packages = getAllPackages();
+  packages.filter(p => p.status !== 'pending');
   console.log('\n📦 Pacotes:');
   packages.forEach((pkg) => {
     console.log(`- ID: ${pkg.id}, Peso: ${pkg.weight}kg, Prioridade: ${pkg.priority}`);
@@ -132,25 +134,73 @@ async function handleCreateDelivery() {
 }
 
 async function handleRunDelivery() {
-  const pendingDeliveries = getAllDeliveries().filter(d => d.status === 'pending');
+  let pendingDeliveries = getAllDeliveries().filter(d => d.status === 'pending');
 
   if (pendingDeliveries.length === 0) {
     console.log('\n⚠️ Não há entregas pendentes para iniciar.');
     return;
   }
 
+
+  const priorityOrder: Record<string, number> = {
+    high: 3,
+    medium: 2,
+    low: 1,
+  };
+
+ 
+  pendingDeliveries.sort((a, b) => {
+    const packageA = getPackageById(a.package_id);
+    const packageB = getPackageById(b.package_id);
+
+    const priorityA = packageA ? priorityOrder[packageA.priority] : 0;
+    const priorityB = packageB ? priorityOrder[packageB.priority] : 0;
+
+    return priorityB - priorityA; // Maior prioridade primeiro
+  });
+
+  // Prompt já ordenado
   const { deliveryId } = await inquirer.prompt([
     {
       type: 'list',
       name: 'deliveryId',
       message: 'Selecione a entrega para iniciar e completar:',
-      choices: pendingDeliveries.map(d => ({ name: `ID ${d.id} - Drone ${d.drone_id} / Pacote ${d.package_id}`, value: d.id })),
+      choices: pendingDeliveries.map(d => {
+        const pkg = getPackageById(d.package_id);
+        const drone = getDroneById(d.drone_id);
+
+        return {
+          name: `Entrega ${d.id} - Drone ${drone?.model || d.drone_id} / Pacote ${pkg?.id} (Prioridade: ${pkg?.priority || "N/A"})`,
+          value: d.id,
+        };
+      }),
     },
   ]);
 
   const result = runDelivery(deliveryId);
   console.log('\n▶️ Resultado da entrega iniciada e completada:');
   console.log(result);
+}
+
+
+async function handleCreateDeliveryAccurate() {
+  const packages = getAllPackages();
+
+  if (packages.length === 0) {
+    console.log('\n⚠️ Não há pacotes cadastrados.');
+    return;
+  }
+
+  const { packageId } = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'packageId',
+      message: 'Escolha o pacote para a entrega de precisão:',
+      choices: packages.map((p) => ({ name: `ID ${p.id} - ${p.weight}kg`, value: p.id })),
+    },
+  ]);
+
+  await createDeliveryAccurate(packageId); // Chama a função de criação precisa
 }
 
 async function handleCreateDrone() {
