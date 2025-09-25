@@ -28,6 +28,7 @@ export function createPackage(
 }
 
 export function getAllPackages(): DeliveryPackage[] {
+    packageList.filter(p => p.status !== 'pending');
     return packageList;
 }
 
